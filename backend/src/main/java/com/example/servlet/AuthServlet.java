@@ -1,8 +1,6 @@
 package com.example.servlet;
 
 import com.example.dao.UserDAO;
-import com.example.model.LoginRequest;
-import com.example.model.RegisterRequest;
 import com.example.model.User;
 import com.example.util.AuthHelper;
 import com.example.util.JsonUtil;
@@ -44,7 +42,7 @@ public class AuthServlet extends HttpServlet {
     }
 
     private void handleRegister(HttpServletRequest request, HttpServletResponse response) throws IOException {
-        RegisterRequest req = JsonUtil.fromJson(request, RegisterRequest.class);
+        User req = JsonUtil.fromJson(request, User.class);
         if (req == null || req.getName() == null || req.getEmail() == null || req.getPassword() == null) {
             JsonUtil.sendError(response, HttpServletResponse.SC_BAD_REQUEST, "Name, email, and password are required");
             return;
@@ -78,7 +76,7 @@ public class AuthServlet extends HttpServlet {
     }
 
     private void handleLogin(HttpServletRequest request, HttpServletResponse response) throws IOException {
-        LoginRequest req = JsonUtil.fromJson(request, LoginRequest.class);
+        User req = JsonUtil.fromJson(request, User.class);
         if (req == null || req.getEmail() == null || req.getPassword() == null) {
             JsonUtil.sendError(response, HttpServletResponse.SC_BAD_REQUEST, "Email and password are required");
             return;

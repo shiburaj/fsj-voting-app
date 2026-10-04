@@ -1,7 +1,7 @@
 package com.example.servlet;
 
 import com.example.dao.VoteDAO;
-import com.example.model.SessionResultDTO;
+import com.example.model.VotingSession;
 import com.example.util.JsonUtil;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -26,7 +26,7 @@ public class ResultServlet extends HttpServlet {
 
         try {
             long sessionId = Long.parseLong(sessionIdParam.trim());
-            SessionResultDTO result = voteDAO.getResultsBySessionId(sessionId);
+            VotingSession result = voteDAO.getResultsBySessionId(sessionId);
             if (result == null) {
                 JsonUtil.sendError(response, HttpServletResponse.SC_NOT_FOUND, "Voting session not found");
                 return;

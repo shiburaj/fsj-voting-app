@@ -67,14 +67,21 @@ export const api = {
   sessions: {
     getMySessions: () => 
       request('/sessions', { method: 'GET' }),
-    createSession: (name, candidates) => 
-      request('/sessions', { method: 'POST', body: { name, candidates } }),
+    createSession: (name, candidates) => {
+      const candidateObjects = (candidates || []).map((c) =>
+        typeof c === 'string' ? { name: c } : c
+      );
+      return request('/sessions', {
+        method: 'POST',
+        body: { name, candidates: candidateObjects },
+      });
+    },
     getByCode: (code) => 
       request(`/sessions?code=${encodeURIComponent(code)}`, { method: 'GET' }),
     getById: (id) => 
       request(`/sessions?id=${encodeURIComponent(id)}`, { method: 'GET' }),
     toggleStatus: (sessionId, votingEnabled) => 
-      request('/sessions/status', { method: 'POST', body: { sessionId, votingEnabled } }),
+      request('/sessions/status', { method: 'POST', body: { id: sessionId, sessionId, votingEnabled } }),
   },
   votes: {
     cast: (sessionId, candidateId) => 

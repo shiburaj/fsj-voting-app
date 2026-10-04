@@ -5,13 +5,17 @@ import java.util.List;
 
 public class VotingSession {
     private Long id;
+    private Long sessionId;
     private String name;
     private Long userId;
     private boolean votingEnabled;
     private String code;
     private Timestamp createdAt;
-    
-    // Optional embedded list for convenience when returning full session
+
+    // Total votes across all candidates in this session
+    private long totalVotes;
+
+    // Embedded candidate list
     private List<Candidate> candidates;
 
     public VotingSession() {}
@@ -26,11 +30,19 @@ public class VotingSession {
     }
 
     public Long getId() {
-        return id;
+        return id != null ? id : sessionId;
     }
 
     public void setId(Long id) {
         this.id = id;
+    }
+
+    public Long getSessionId() {
+        return sessionId != null ? sessionId : id;
+    }
+
+    public void setSessionId(Long sessionId) {
+        this.sessionId = sessionId;
     }
 
     public String getName() {
@@ -71,6 +83,14 @@ public class VotingSession {
 
     public void setCreatedAt(Timestamp createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public long getTotalVotes() {
+        return totalVotes;
+    }
+
+    public void setTotalVotes(long totalVotes) {
+        this.totalVotes = totalVotes;
     }
 
     public List<Candidate> getCandidates() {

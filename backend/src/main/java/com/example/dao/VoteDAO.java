@@ -1,8 +1,6 @@
 package com.example.dao;
 
 import com.example.model.Candidate;
-import com.example.model.CandidateResultDTO;
-import com.example.model.SessionResultDTO;
 import com.example.model.Vote;
 import com.example.model.VotingSession;
 import com.example.util.DBUtil;
@@ -61,7 +59,7 @@ public class VoteDAO {
         }
     }
 
-    public SessionResultDTO getResultsBySessionId(Long sessionId) throws SQLException {
+    public VotingSession getResultsBySessionId(Long sessionId) throws SQLException {
         VotingSession session = sessionDAO.getSessionById(sessionId);
         if (session == null) {
             return null;
@@ -94,26 +92,21 @@ public class VoteDAO {
             DBUtil.close(conn, stmt, rs);
         }
 
-        List<CandidateResultDTO> candidateResults = new ArrayList<>();
         for (Candidate c : candidates) {
             long count = countsMap.getOrDefault(c.getId(), 0L);
             double percentage = totalVotes > 0 ? ((double) count / totalVotes) * 100.0 : 0.0;
             // Round to 1 decimal place
             percentage = Math.round(percentage * 10.0) / 10.0;
-            candidateResults.add(new CandidateResultDTO(c.getId(), c.getName(), count, percentage));
+            c.setVoteCount(count);
+            c.setPercentage(percentage);
         }
 
         // Sort descending by vote count
-        candidateResults.sort((a, b) -> Long.compare(b.getVoteCount(), a.getVoteCount()));
+        candidates.sort((a, b) -> Long.compare(b.getVoteCount(), a.getVoteCount()));
 
-        SessionResultDTO resultDTO = new SessionResultDTO();
-        resultDTO.setSessionId(session.getId());
-        resultDTO.setSessionName(session.getName());
-        resultDTO.setCode(session.getCode());
-        resultDTO.setVotingEnabled(session.isVotingEnabled());
-        resultDTO.setTotalVotes(totalVotes);
-        resultDTO.setCandidates(candidateResults);
+        session.setTotalVotes(totalVotes);
+        session.setCandidates(candidates);
 
-        return resultDTO;
+        return session;
     }
 }

@@ -46,7 +46,7 @@ export function ResultsView({ sessionId, onBack }) {
     if (!results) return;
     setToggling(true);
     try {
-      await api.sessions.toggleStatus(results.sessionId, !results.votingEnabled);
+      await api.sessions.toggleStatus(results.id || results.sessionId, !results.votingEnabled);
       // Immediately re-fetch
       await fetchResults();
     } catch (err) {
@@ -62,7 +62,7 @@ export function ResultsView({ sessionId, onBack }) {
     const maxVotes = Math.max(...results.candidates.map((c) => c.voteCount));
     if (maxVotes === 0) return null;
     const top = results.candidates.find((c) => c.voteCount === maxVotes);
-    return top ? top.candidateId : null;
+    return top ? (top.id ?? top.candidateId) : null;
   }, [results]);
 
   return (
@@ -112,7 +112,7 @@ export function ResultsView({ sessionId, onBack }) {
           <CardHeader className="bg-slate-50/50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <div className="flex items-center gap-2">
-                <CardTitle className="text-2xl">{results.sessionName}</CardTitle>
+                <CardTitle className="text-2xl">{results.name || results.sessionName}</CardTitle>
               </div>
               <CardDescription>
                 Session Code: <span className="font-mono font-bold text-indigo-600">{results.code}</span>
@@ -185,11 +185,13 @@ export function ResultsView({ sessionId, onBack }) {
 
               <div className="space-y-3">
                 {results.candidates?.map((candidate, idx) => {
-                  const isLeader = candidate.candidateId === topCandidateId;
+                  const candidateId = candidate.id ?? candidate.candidateId;
+                  const candidateName = candidate.name || candidate.candidateName;
+                  const isLeader = candidateId === topCandidateId;
 
                   return (
                     <div
-                      key={candidate.candidateId}
+                      key={candidateId}
                       className={`p-4 rounded-xl border transition-all ${
                         isLeader
                           ? 'border-indigo-300 bg-indigo-50/20 shadow-xs'
@@ -202,7 +204,7 @@ export function ResultsView({ sessionId, onBack }) {
                             #{idx + 1}
                           </span>
                           <span className="font-semibold text-slate-900">
-                            {candidate.candidateName}
+                            {candidateName}
                           </span>
                           {isLeader && (
                             <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">

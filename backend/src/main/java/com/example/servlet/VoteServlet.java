@@ -6,7 +6,6 @@ import com.example.dao.VoteDAO;
 import com.example.model.ApiResponse;
 import com.example.model.Candidate;
 import com.example.model.Vote;
-import com.example.model.VoteRequest;
 import com.example.model.VotingSession;
 import com.example.util.AuthHelper;
 import com.example.util.JsonUtil;
@@ -70,7 +69,7 @@ public class VoteServlet extends HttpServlet {
             return;
         }
 
-        VoteRequest req = JsonUtil.fromJson(request, VoteRequest.class);
+        Vote req = JsonUtil.fromJson(request, Vote.class);
         if (req == null || req.getSessionId() == null || req.getCandidateId() == null) {
             JsonUtil.sendError(response, HttpServletResponse.SC_BAD_REQUEST, "Session ID and Candidate ID are required");
             return;

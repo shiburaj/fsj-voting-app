@@ -1,8 +1,8 @@
 package com.example.servlet;
 
 import com.example.dao.SessionDAO;
-import com.example.model.CreateSessionRequest;
-import com.example.model.ToggleStatusRequest;
+import com.example.model.ApiResponse;
+import com.example.model.Candidate;
 import com.example.model.VotingSession;
 import com.example.util.AuthHelper;
 import com.example.util.JsonUtil;
@@ -13,6 +13,7 @@ import jakarta.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
 
 @WebServlet(urlPatterns = {"/api/sessions", "/api/sessions/status"})
@@ -26,23 +27,23 @@ public class SessionServlet extends HttpServlet {
         String idParam = request.getParameter("id");
 
         try {
-            // Voter code lookup: /api/sessions?code=XYZ
+            // Voter lookup by session code: /api/sessions?code=ABC123
             if (code != null && !code.trim().isEmpty()) {
-                VotingSession session = sessionDAO.getSessionByCode(code.trim());
+                VotingSession session = sessionDAO.getSessionByCode(code.trim().toUpperCase());
                 if (session == null) {
-                    JsonUtil.sendError(response, HttpServletResponse.SC_NOT_FOUND, "No voting session found with code " + code.trim());
+                    JsonUtil.sendError(response, HttpServletResponse.SC_NOT_FOUND, "Voting session not found with code: " + code);
                     return;
                 }
-                JsonUtil.sendOk(response, "Session found", session);
+                JsonUtil.sendOk(response, "Session details", session);
                 return;
             }
 
-            // Direct ID lookup: /api/sessions?id=123
+            // Lookup by ID: /api/sessions?id=123
             if (idParam != null && !idParam.trim().isEmpty()) {
-                long id = Long.parseLong(idParam.trim());
-                VotingSession session = sessionDAO.getSessionById(id);
+                long sessionId = Long.parseLong(idParam.trim());
+                VotingSession session = sessionDAO.getSessionById(sessionId);
                 if (session == null) {
-                    JsonUtil.sendError(response, HttpServletResponse.SC_NOT_FOUND, "Session not found");
+                    JsonUtil.sendError(response, HttpServletResponse.SC_NOT_FOUND, "Voting session not found");
                     return;
                 }
                 JsonUtil.sendOk(response, "Session details", session);
@@ -82,25 +83,33 @@ public class SessionServlet extends HttpServlet {
             return;
         }
 
-        CreateSessionRequest req = JsonUtil.fromJson(request, CreateSessionRequest.class);
-        if (req == null || req.getName() == null || req.getName().trim().isEmpty()) {
+        VotingSession session = JsonUtil.fromJson(request, VotingSession.class);
+        if (session == null || session.getName() == null || session.getName().trim().isEmpty()) {
             JsonUtil.sendError(response, HttpServletResponse.SC_BAD_REQUEST, "Session name is required");
             return;
         }
 
-        if (req.getCandidates() == null || req.getCandidates().size() < 2) {
+        List<String> candidateNames = new ArrayList<>();
+        if (session.getCandidates() != null) {
+            for (Candidate c : session.getCandidates()) {
+                if (c != null && c.getName() != null && !c.getName().trim().isEmpty()) {
+                    candidateNames.add(c.getName().trim());
+                }
+            }
+        }
+
+        if (candidateNames.size() < 2) {
             JsonUtil.sendError(response, HttpServletResponse.SC_BAD_REQUEST, "At least 2 candidates are required to create a voting session");
             return;
         }
 
         try {
-            VotingSession session = new VotingSession();
-            session.setName(req.getName().trim());
+            session.setName(session.getName().trim());
             session.setUserId(userId);
             session.setVotingEnabled(true); // Default to enabled so voters can participate immediately
 
-            VotingSession created = sessionDAO.createSession(session, req.getCandidates());
-            JsonUtil.sendJson(response, HttpServletResponse.SC_CREATED, com.example.model.ApiResponse.ok("Session created successfully", created));
+            VotingSession created = sessionDAO.createSession(session, candidateNames);
+            JsonUtil.sendJson(response, HttpServletResponse.SC_CREATED, ApiResponse.ok("Session created successfully", created));
         } catch (SQLException e) {
             e.printStackTrace();
             JsonUtil.sendError(response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Database error: " + e.getMessage());
@@ -114,20 +123,21 @@ public class SessionServlet extends HttpServlet {
             return;
         }
 
-        ToggleStatusRequest req = JsonUtil.fromJson(request, ToggleStatusRequest.class);
-        if (req == null || req.getSessionId() == null) {
+        VotingSession req = JsonUtil.fromJson(request, VotingSession.class);
+        Long sessionId = req != null ? req.getId() : null;
+        if (sessionId == null) {
             JsonUtil.sendError(response, HttpServletResponse.SC_BAD_REQUEST, "Session ID is required");
             return;
         }
 
         try {
-            boolean updated = sessionDAO.updateVotingStatus(req.getSessionId(), userId, req.isVotingEnabled());
+            boolean updated = sessionDAO.updateVotingStatus(sessionId, userId, req.isVotingEnabled());
             if (!updated) {
                 JsonUtil.sendError(response, HttpServletResponse.SC_FORBIDDEN, "Unable to update session. You might not be the owner or session does not exist.");
                 return;
             }
 
-            VotingSession updatedSession = sessionDAO.getSessionById(req.getSessionId());
+            VotingSession updatedSession = sessionDAO.getSessionById(sessionId);
             JsonUtil.sendOk(response, "Session voting status updated", updatedSession);
         } catch (SQLException e) {
             e.printStackTrace();
