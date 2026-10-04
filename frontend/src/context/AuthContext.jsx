@@ -18,6 +18,24 @@ export function AuthProvider({ children }) {
 
   const [loading, setLoading] = useState(false);
 
+  // Validate server-side HttpSession on initial load
+  useEffect(() => {
+    async function verifySession() {
+      try {
+        const res = await api.auth.me();
+        if (res && res.data) {
+          setUser(res.data);
+          localStorage.setItem('voting_user', JSON.stringify(res.data));
+        }
+      } catch (err) {
+        // Session expired or not logged in
+        setUser(null);
+        localStorage.removeItem('voting_user');
+      }
+    }
+    verifySession();
+  }, []);
+
   const login = async (email, password) => {
     setLoading(true);
     try {
@@ -44,9 +62,15 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('voting_user');
+  const logout = async () => {
+    try {
+      await api.auth.logout();
+    } catch (e) {
+      console.error('Logout error', e);
+    } finally {
+      setUser(null);
+      localStorage.removeItem('voting_user');
+    }
   };
 
   return (

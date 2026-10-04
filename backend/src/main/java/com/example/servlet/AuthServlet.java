@@ -12,7 +12,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.sql.SQLException;
 
-@WebServlet(urlPatterns = {"/api/auth/register", "/api/auth/login", "/api/auth/me"})
+@WebServlet(urlPatterns = {"/api/auth/register", "/api/auth/login", "/api/auth/logout", "/api/auth/me"})
 public class AuthServlet extends HttpServlet {
 
     private final UserDAO userDAO = new UserDAO();
@@ -25,6 +25,8 @@ public class AuthServlet extends HttpServlet {
             handleRegister(request, response);
         } else if ("/api/auth/login".equals(path)) {
             handleLogin(request, response);
+        } else if ("/api/auth/logout".equals(path)) {
+            handleLogout(request, response);
         } else {
             JsonUtil.sendError(response, HttpServletResponse.SC_NOT_FOUND, "Endpoint not found");
         }
@@ -66,7 +68,10 @@ public class AuthServlet extends HttpServlet {
 
             User user = new User(name, email, password);
             User registered = userDAO.register(user);
-            registered.setPassword(null); // Never return password in response
+            registered.setPassword(null);
+
+            // Store user in HttpSession upon successful registration
+            AuthHelper.loginUser(request, registered);
 
             JsonUtil.sendOk(response, "Registration successful", registered);
         } catch (SQLException e) {
@@ -90,6 +95,10 @@ public class AuthServlet extends HttpServlet {
             }
 
             user.setPassword(null); // Clear password hash
+
+            // Store user in HttpSession upon successful login
+            AuthHelper.loginUser(request, user);
+
             JsonUtil.sendOk(response, "Login successful", user);
         } catch (SQLException e) {
             e.printStackTrace();
@@ -97,24 +106,30 @@ public class AuthServlet extends HttpServlet {
         }
     }
 
+    private void handleLogout(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        AuthHelper.logoutUser(request);
+        JsonUtil.sendOk(response, "Logout successful", null);
+    }
+
     private void handleMe(HttpServletRequest request, HttpServletResponse response) throws IOException {
-        Long userId = AuthHelper.getUserId(request);
-        if (userId == null) {
+        User user = AuthHelper.getLoggedInUser(request);
+        if (user == null) {
+            Long userId = AuthHelper.getUserId(request);
+            if (userId != null) {
+                try {
+                    user = userDAO.findById(userId);
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+
+        if (user == null) {
             JsonUtil.sendError(response, HttpServletResponse.SC_UNAUTHORIZED, "User not authenticated");
             return;
         }
 
-        try {
-            User user = userDAO.findById(userId);
-            if (user == null) {
-                JsonUtil.sendError(response, HttpServletResponse.SC_NOT_FOUND, "User not found");
-                return;
-            }
-            user.setPassword(null);
-            JsonUtil.sendOk(response, "User profile", user);
-        } catch (SQLException e) {
-            e.printStackTrace();
-            JsonUtil.sendError(response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Database error: " + e.getMessage());
-        }
+        user.setPassword(null);
+        JsonUtil.sendOk(response, "User profile", user);
     }
 }

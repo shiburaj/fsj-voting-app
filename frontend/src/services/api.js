@@ -33,6 +33,7 @@ async function request(endpoint, options = {}) {
 
   const response = await fetch(url, {
     ...options,
+    credentials: 'include',
     headers,
   });
 
@@ -61,6 +62,8 @@ export const api = {
       request('/auth/login', { method: 'POST', body: { email, password } }),
     register: (name, email, password) => 
       request('/auth/register', { method: 'POST', body: { name, email, password } }),
+    logout: () =>
+      request('/auth/logout', { method: 'POST' }),
     me: () => 
       request('/auth/me', { method: 'GET' }),
   },
